@@ -391,9 +391,6 @@ async def ejecutar_lobby_partida(pantalla, reloj, modo_juego, nombre_sala, idx_c
                 else:
                     raise Exception("Protocolo incorrecto: No se recibió bienvenida.")
 
-                # Escuchar si nos ascienden a host
-                promotion_task = asyncio.create_task(check_for_promotion(websocket))
-
                 # 2. Si somos el host (o nos acaban de ascender), enviamos la configuración de la partida
                 # El modo_juego original nos dice si fuimos los que creamos la sala.
                 if is_host:
@@ -431,15 +428,6 @@ async def ejecutar_lobby_partida(pantalla, reloj, modo_juego, nombre_sala, idx_c
             estado_conexion = f"Error de conexión: {e}"
             print(f"Error en el lobby de partida: {e}")
             websocket = None # Señalamos que la conexión falló
-    
-    async def check_for_promotion(ws):
-        """Tarea dedicada a escuchar solo el mensaje de ascenso a host."""
-        nonlocal is_host
-        # Esta tarea se cancelará cuando la principal termine.
-        while not is_host:
-            # No consumimos el mensaje, solo lo 'espiamos' para no interferir
-            # con el bucle principal. La lógica real se hará en el bucle principal.
-            await asyncio.sleep(0.1)
 
     net_task = asyncio.create_task(network_task())
 
@@ -482,17 +470,19 @@ async def ejecutar_lobby_partida(pantalla, reloj, modo_juego, nombre_sala, idx_c
         players_title = fuente_texto.render(f"Jugadores ({len(game_state.get('players', []))}/5):", True, BLANCO)
         pantalla.blit(players_title, (50, 220))
         
+        host_id = game_state.get('host_id')
         y_offset = 270
         for i, player_data in enumerate(game_state.get("players", [])):
             player_id = player_data.get('id')
             is_me = (player_id == my_id)
+            is_player_host = (player_id == host_id)
             try:
                 auto_nombre = CLASES_AUTOS[player_data['auto_info']['clase']]['autos'][player_data['auto_info']['auto']]['nombre']
             except (KeyError, IndexError):
                 auto_nombre = "Eligiendo..."
             player_str = f"  - {auto_nombre}"
-            color = (255, 215, 0) if is_me else ((100, 255, 100) if player_id == game_state.get('host_id') else BLANCO)
-            player_txt = fuente_jugador.render(f"{i+1}. Jugador {player_id[-5:]}{' (Host)' if i==0 else ''}{' (Tú)' if is_me else ''}", True, color)
+            color = (255, 215, 0) if is_me else ((100, 255, 100) if is_player_host else BLANCO)
+            player_txt = fuente_jugador.render(f"{i+1}. Jugador {player_id[-5:]}{' (Host)' if is_player_host else ''}{' (Tú)' if is_me else ''}", True, color)
             auto_txt = fuente_jugador.render(player_str, True, (200, 200, 200))
             pantalla.blit(player_txt, (70, y_offset))
             pantalla.blit(auto_txt, (70, y_offset + 25))

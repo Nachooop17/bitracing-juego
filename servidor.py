@@ -3,6 +3,7 @@ import asyncio
 import websockets
 import json
 import time
+import urllib.parse
 from http import HTTPStatus
 import os
 from config import LISTA_PISTAS
@@ -84,7 +85,8 @@ class Room:
                         "type": "state_update",
                         "payload": {
                             "session": self.session_state,
-                            "players": list(self.game_state["players"].values())
+                            "players": list(self.game_state["players"].values()),
+                            "host_id": self.host_id
                         }
                     })
                     await asyncio.gather(*[ws.send(message) for ws in self.players.keys()], return_exceptions=True)
@@ -148,8 +150,9 @@ async def handler(websocket, path):
         finally:
             LOBBY_CLIENTS.remove(websocket)
     else:
-        room_name = path.strip('/')
-        if not room_name: return # Ignorar conexiones a la raíz
+        room_name_encoded = path.strip('/')
+        if not room_name_encoded: return # Ignorar conexiones a la raíz
+        room_name = urllib.parse.unquote(room_name_encoded)
 
         # Crea la sala si no existe, o la obtiene si ya existe.
         room = ROOMS.setdefault(room_name, Room(room_name, on_state_change=broadcast_to_lobby))
