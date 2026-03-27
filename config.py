@@ -27,7 +27,7 @@ OPCIONES = {
 # Esta será la URL que Render te dará después de desplegar tu servidor.
 # Usamos 'wss' (WebSocket Secure) porque es el estándar para conexiones web.
 # El path '/lobby' será un endpoint especial para obtener la lista de salas.
-DEDICATED_SERVER_URI = "https://bitracing-server.onrender.com" # ¡Cambia 'bitracing-server' por el nombre de tu app!
+DEDICATED_SERVER_URI = "wss://bitracing-server.onrender.com" # ¡Cambia 'bitracing-server' por el nombre de tu app!
 
 # Listas de recursos
 CLASES_AUTOS = [

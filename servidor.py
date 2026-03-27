@@ -3,6 +3,7 @@ import asyncio
 import websockets
 import json
 import time
+from http import HTTPStatus
 import os
 from config import LISTA_PISTAS
 
@@ -117,6 +118,14 @@ async def broadcast_to_lobby():
         message = json.dumps({"type": "room_list", "rooms": room_list})
         await asyncio.gather(*[ws.send(message) for ws in LOBBY_CLIENTS], return_exceptions=True)
 
+async def process_request(path, request_headers):
+    """Procesa peticiones HTTP antes del handshake de WebSocket."""
+    # Render envía peticiones HEAD o GET a la raíz para comprobar la salud del servicio.
+    if path == "/":
+        print("Health check recibido. Respondiendo 200 OK.")
+        return HTTPStatus.OK, [], b"OK\n"
+    return None  # Procede con el handshake de WebSocket
+
 async def cleanup_empty_rooms():
     """Tarea periódica para encontrar y cerrar salas vacías."""
     while True:
@@ -154,7 +163,7 @@ async def main():
     asyncio.create_task(cleanup_empty_rooms())
 
     print(f"Servidor dedicado iniciado en 0.0.0.0:{port}")
-    async with websockets.serve(handler, "0.0.0.0", port):
+    async with websockets.serve(handler, "0.0.0.0", port, process_request=process_request):
         await asyncio.Future()  # Correr indefinidamente
 
 if __name__ == "__main__":
