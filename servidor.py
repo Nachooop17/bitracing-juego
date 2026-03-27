@@ -138,10 +138,13 @@ async def broadcast_to_lobby():
 
 async def process_request(path, request_headers):
     """Procesa peticiones HTTP antes del handshake de WebSocket."""
-    # Render envía peticiones HEAD o GET a la raíz para comprobar la salud del servicio.
     if path == "/":
-        print("Health check recibido. Respondiendo 200 OK.")
-        return HTTPStatus.OK, [], b"OK\n"
+        method = request_headers.get("method")
+        if method in ("GET", "HEAD"):
+            print(f"Health check recibido con método {method}. Respondiendo 200 OK.")
+            return HTTPStatus.OK, [], b"OK\n"
+        else:
+            print(f"Petición HTTP no soportada recibida en la raíz: {method}")
     return None  # Procede con el handshake de WebSocket
 
 async def cleanup_empty_rooms():
