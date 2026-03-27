@@ -36,29 +36,45 @@ class Room:
             await websocket.send(json.dumps({"type": "session_update", "payload": self.session_state}))
 
             async for message in websocket:
-                data = json.loads(message)
-                
-                if data['type'] == 'player_update':
-                    if client_id not in self.game_state["players"]:
-                        self.game_state["players"][client_id] = {}
-                    self.game_state["players"][client_id].update(data['payload'])
-                    self.game_state["players"][client_id]['id'] = client_id
-                
-                elif data['type'] == 'set_game_info' and is_host:
-                    payload = data.get('payload', {})
-                    self.session_state['track_idx'] = payload.get('track_idx', 0)
-                    try:
-                        self.session_state['track_name'] = LISTA_PISTAS[self.session_state['track_idx']]['nombre']
-                    except IndexError:
-                        self.session_state['track_name'] = "Pista Desconocida"
-                    print(f"[{self.name}] Host ha seleccionado la pista: {self.session_state['track_name']}")
-                    self.on_state_change()
+                try:
+                    data = json.loads(message)
+                    if not isinstance(data, dict):
+                        print(f"[{self.name}] WARNING: Received non-dict message from {client_id}")
+                        continue
+                    
+                    msg_type = data.get('type')
+                    if not msg_type:
+                        print(f"[{self.name}] WARNING: Received message without type from {client_id}")
+                        continue
 
-                elif data['type'] == 'host_action' and is_host and data.get('action') == 'start_race':
-                    if self.session_state['state'] == 'LOBBY':
-                        print(f"[{self.name}] El Host ha iniciado la carrera!")
-                        self.session_state['state'] = 'CUENTA_ATRAS'
+                    if msg_type == 'player_update':
+                        if client_id not in self.game_state["players"]:
+                            self.game_state["players"][client_id] = {}
+                        self.game_state["players"][client_id].update(data['payload'])
+                        self.game_state["players"][client_id]['id'] = client_id
+                    
+                    elif msg_type == 'set_game_info' and is_host:
+                        payload = data.get('payload', {})
+                        self.session_state['track_idx'] = payload.get('track_idx', 0)
+                        try:
+                            self.session_state['track_name'] = LISTA_PISTAS[self.session_state['track_idx']]['nombre']
+                        except IndexError:
+                            self.session_state['track_name'] = "Pista Desconocida"
+                        print(f"[{self.name}] Host ha seleccionado la pista: {self.session_state['track_name']}")
                         self.on_state_change()
+
+                    elif msg_type == 'host_action' and is_host and data.get('action') == 'start_race':
+                        if self.session_state['state'] == 'LOBBY':
+                            print(f"[{self.name}] El Host ha iniciado la carrera!")
+                            self.session_state['state'] = 'CUENTA_ATRAS'
+                            self.on_state_change()
+                except json.JSONDecodeError:
+                    print(f"[{self.name}] WARNING: Received invalid JSON from {client_id}: {message}")
+                except Exception:
+                    import traceback
+                    print(f"[{self.name}] ERROR: Unhandled exception for client {client_id}:")
+                    traceback.print_exc()
+                    break  # Cierra la conexión para este cliente
         finally:
             print(f"[{self.name}] Jugador {client_id} desconectado.")
             del self.players[websocket]

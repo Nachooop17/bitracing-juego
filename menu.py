@@ -6,6 +6,7 @@ from config import *
 from utils import obtener_ruta, GameExit
 import websockets
 import json
+import urllib.parse
 
 async def ejecutar_menu(pantalla, reloj):
     estado_menu = "PRINCIPAL"
@@ -376,7 +377,8 @@ async def ejecutar_lobby_partida(pantalla, reloj, modo_juego, nombre_sala, idx_c
 
     async def network_task():
         nonlocal websocket, my_id, game_state, estado_conexion, is_host
-        uri = f"{DEDICATED_SERVER_URI}/{nombre_sala}"
+        room_name_encoded = urllib.parse.quote(nombre_sala)
+        uri = f"{DEDICATED_SERVER_URI}/{room_name_encoded}"
         try:
             async with websockets.connect(uri) as ws:
                 websocket = ws
